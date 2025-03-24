@@ -10,3 +10,15 @@ spring:
       base-url: http://localhost:11434
       chat:
         model: deepseek-r1:1.5b
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+
+# 日志配置
+logging:
+  level:
+    com.alibaba.cloud.ai.example: info
+    org.springframework.ai: info

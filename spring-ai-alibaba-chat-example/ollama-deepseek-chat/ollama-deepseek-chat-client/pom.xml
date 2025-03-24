@@ -34,6 +34,14 @@
 	<description>Spring AI Alibaba Ollama DeepSeek Chat Client Example</description>
 	<name>Spring AI Alibaba Ollama DeepSeek Chat Client Examples</name>
 
+	<dependencies>
+		<!-- Thymeleaf 模板引擎 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+	</dependencies>
+
 	<build>
 		<plugins>
 			<plugin>

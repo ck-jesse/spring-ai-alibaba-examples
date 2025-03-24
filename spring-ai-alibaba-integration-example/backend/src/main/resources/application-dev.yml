@@ -19,9 +19,11 @@ spring:
   ai:
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY}
+      #api-key: sk-9a90b5508e2e4e2c90418136245e239a
 
   datasource:
-    url: jdbc:sqlite:src/main/resources/db/user.db
+    #url: jdbc:sqlite:src/main/resources/db/user.db
+    url: jdbc:sqlite:D:\workspace\github\ck\spring-ai-alibaba-examples\spring-ai-alibaba-integration-example\backend\src\main\resources\db\user.db
     driver-class-name: org.sqlite.JDBC
 
   jpa:
@@ -35,13 +37,6 @@ spring:
       hibernate:
         boot:
           allow_jdbc_metadata_access: false
-  iqs:
-    search:
-      api-key: ${ALIYUN_IQS_KEY}
 
-# enabled debug log out.
-logging:
-  level:
-#    org.springframework.ai: debug
-#    com.alibaba.dashscope.api: debug
-    com.alibaba.cloud.ai.application.websearch: debug
+  web-search:
+    api-key: ${WEB_SEARCH_API_KEY}

@@ -47,93 +47,92 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class SAAAudioService {
 
-	private final AudioTranscriptionModel transcriptionModel;
+    private final AudioTranscriptionModel transcriptionModel;
 
-	private final SpeechSynthesisModel speechSynthesisModel;
+    private final SpeechSynthesisModel speechSynthesisModel;
 
-	private final String DEFAULT_MODEL = "paraformer-realtime-v2";
+    private final String DEFAULT_MODEL = "paraformer-realtime-v2";
 
-	public SAAAudioService(AudioTranscriptionModel transcriptionModel, SpeechSynthesisModel speechSynthesisModel) {
+    public SAAAudioService(AudioTranscriptionModel transcriptionModel, SpeechSynthesisModel speechSynthesisModel) {
 
-		this.transcriptionModel = transcriptionModel;
-		this.speechSynthesisModel = speechSynthesisModel;
-	}
+        this.transcriptionModel = transcriptionModel;
+        this.speechSynthesisModel = speechSynthesisModel;
+    }
 
-	/**
-	 * 将文本转为语音
-	 */
-	public byte[] text2audio(String text) {
+    /**
+     * 将文本转为语音
+     */
+    public byte[] text2audio(String text) {
 
-		Flux<SpeechSynthesisResponse> response = speechSynthesisModel.stream(
-				new SpeechSynthesisPrompt(text)
-		);
+        Flux<SpeechSynthesisResponse> response = speechSynthesisModel.stream(
+                new SpeechSynthesisPrompt(text)
+        );
 
-		CountDownLatch latch = new CountDownLatch(1);
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        CountDownLatch latch = new CountDownLatch(1);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-		try {
-			response.doFinally(
-					signal -> latch.countDown()
-			).subscribe(synthesisResponse -> {
+        try {
+            response.doFinally(
+                    signal -> latch.countDown()
+            ).subscribe(synthesisResponse -> {
 
-				ByteBuffer byteBuffer = synthesisResponse.getResult().getOutput().getAudio();
-				byte[] bytes = new byte[byteBuffer.remaining()];
-				byteBuffer.get(bytes);
+                ByteBuffer byteBuffer = synthesisResponse.getResult().getOutput().getAudio();
+                byte[] bytes = new byte[byteBuffer.remaining()];
+                byteBuffer.get(bytes);
 
-				try {
-					outputStream.write(bytes);
-				}
-				catch (IOException e) {
-					throw new SAAAIException("Error writing to output stream " + e.getMessage());
-				}
-			});
+                try {
+                    outputStream.write(bytes);
+                } catch (IOException e) {
+                    throw new SAAAIException("Error writing to output stream " + e.getMessage());
+                }
+            });
 
-			latch.await();
-		}
-		catch (InterruptedException e) {
-			throw new SAAAppException("Operation interrupted. " + e.getMessage());
-		}
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new SAAAppException("Operation interrupted. " + e.getMessage());
+        }
 
-		return outputStream.toByteArray();
-	}
+        return outputStream.toByteArray();
+    }
 
-	/**
-	 * 将语音转为文本
-	 */
-	public Flux<String> audio2text(MultipartFile file) throws IOException {
+    /**
+     * 将语音转为文本
+     */
+    public Flux<String> audio2text(MultipartFile file) throws IOException {
 
-		CountDownLatch latch = new CountDownLatch(1);
-		StringBuilder stringBuilder = new StringBuilder();
+        CountDownLatch latch = new CountDownLatch(1);
+        StringBuilder stringBuilder = new StringBuilder();
 
-		String filePath = System.getProperty("user.dir") + "/" + "tmp/audio/" + file.getOriginalFilename();
-		FilesUtils.saveTempImage(file, filePath);
+        String filePath = System.getProperty("user.dir") + "/" + "tmp/audio/" + file.getOriginalFilename();
+        FilesUtils.saveTempImage(file, filePath);
 
-		Flux<AudioTranscriptionResponse> response = transcriptionModel.stream(
-				new AudioTranscriptionPrompt(
-						new FileSystemResource(filePath),
-						DashScopeAudioTranscriptionOptions.builder()
-								.withModel(DEFAULT_MODEL)
-								.withSampleRate(16000)
-								.withFormat(DashScopeAudioTranscriptionOptions.AudioFormat.PCM)
-								.withDisfluencyRemovalEnabled(false)
-								.build()
-				)
-		);
+        Flux<AudioTranscriptionResponse> response = transcriptionModel.stream(
+                new AudioTranscriptionPrompt(
+                        new FileSystemResource(filePath),
+                        DashScopeAudioTranscriptionOptions.builder()
+                                .withModel(DEFAULT_MODEL)
+                                .withSampleRate(16000)
+                                .withFormat(DashScopeAudioTranscriptionOptions.AudioFormat.PCM)
+                                .withDisfluencyRemovalEnabled(false)
+                                .build()
+                )
+        );
 
-		response.doFinally(signal -> latch.countDown())
-				.subscribe(resp -> stringBuilder.append(resp.getResult().getOutput()).append("\n"));
+        response.doFinally(signal -> latch.countDown())
+				.doOnError(e -> System.out.println("Error occurred: " + e.getMessage())) // 打印错误信息，但不改变流程
+//                .onErrorReturn(new AudioTranscriptionResponse(null))
+                .subscribe(resp -> stringBuilder.append(resp.getResult().getOutput()).append("\n"))
+        ;
 
-		try {
-			latch.await();
-		}
-		catch (InterruptedException e) {
-			throw new SAAAIException("Transcription was interrupted " + e.getMessage());
-		}
-		finally {
-			new File(filePath).delete();
-		}
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new SAAAIException("Transcription was interrupted " + e.getMessage());
+        } finally {
+            new File(filePath).delete();
+        }
 
-		return Flux.just(stringBuilder.toString());
-	}
+        return Flux.just(stringBuilder.toString());
+    }
 
 }
